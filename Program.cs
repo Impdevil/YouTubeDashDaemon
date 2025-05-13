@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Xunit;
 using YT_APP;
+using YT_APP.Database;
 using YT_APP.Services;
 using YT_APP.Tests;
 
@@ -17,8 +18,23 @@ IHost host = Host.CreateDefaultBuilder(args)
         var applicationName = configuration.GetSection("Keys:YoutubeKey:installed:project_id").Value;
         var clientId = configuration.GetSection("Keys:YoutubeKey:installed:client_id").Value;
         var testAPIKey = configuration.GetSection("Keys:TESTAPIKEY").Value;
-        Console.WriteLine($"API Key: {apikey}");
-        services.AddHostedService<Worker>();
+        var connectionString = configuration.GetSection("DefaultConnection").Value;
+            Assert.NotNull(apikey);
+            Assert.NotEmpty(apikey);
+            Assert.NotNull(applicationName);
+            Assert.NotEmpty(applicationName);
+            Assert.NotNull(clientId);
+            Assert.NotEmpty(clientId);
+            Assert.NotNull(testAPIKey);
+            Assert.NotEmpty(testAPIKey);
+            Assert.NotNull(connectionString);
+            Assert.NotEmpty(connectionString);
+        
+        var logger = services.BuildServiceProvider().GetRequiredService<ILogger<DatabaseHelper>>();
+        var databaseHelper = new DatabaseHelper(connectionString,logger);
+        databaseHelper.CreateDatabase();
+        services.AddSingleton<DatabaseHelper>(databaseHelper);
+
         services.AddSingleton<CustomYouTubeService>(provider =>
         {
             Assert.NotNull(apikey);
@@ -29,10 +45,14 @@ IHost host = Host.CreateDefaultBuilder(args)
             Assert.NotEmpty(clientId);
             Assert.NotNull(testAPIKey);
             Assert.NotEmpty(testAPIKey);
-            var logger = provider.GetRequiredService<ILogger<IYouTubeAPI>>();
-            var youTubeAPI = new YouTubeAPIService(logger, testAPIKey,applicationName, clientId);
-            return new CustomYouTubeService(logger, youTubeAPI);
+            var APIlogger = provider.GetRequiredService<ILogger<IYouTubeAPI>>();
+            var Servicelogger = provider.GetRequiredService<ILogger<CustomYouTubeService>>();
+            var youTubeAPI = new YouTubeAPIService(APIlogger, testAPIKey,applicationName, clientId);
+            var databaseHelper = provider.GetRequiredService<DatabaseHelper>();
+            return new CustomYouTubeService(Servicelogger, youTubeAPI, databaseHelper);
         });
+        services.AddHostedService<Worker>();
+
 
 
     })

@@ -5,11 +5,35 @@ using Google.Apis.YouTube.v3;
 namespace YT_APP.Services;
 
 
+public struct YTvideo
+{
+    public string VideoID { get; set; }
+    public string ChannelID { get; set; }
+    public string Title { get; set; }
+    public string Description { get; set; }
+    public DateTime PublishedAt { get; set; }
+
+}
+public struct Channel
+{
+    public string ChannelID { get; set; }
+    public string Handle { get; set; }
+    public string Tags { get; set; }
+}
+
+public struct Playlist
+{
+    public string PlaylistID { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 public interface IYouTubeAPI
 {
-    Task<string> GetChannelIDFromHandleAsync(string handle);
-    Task<string> GetNewestVideoAsync(string channelID);
-    Task<string> CreatePlaylistAsync(string title, string description);
+    Task<Channel> GetChannelFromHandleAsync(string handle);
+    Task<YTvideo> GetNewestVideoAsync(string channelID);
+    Task<Playlist> CreatePlaylistAsync(string title, string description);
 }
 
 
@@ -32,7 +56,7 @@ public class YouTubeAPIService : IYouTubeAPI
     }
 
 
-    public async Task<string> GetChannelIDFromHandleAsync(string handle)
+    public async Task<Channel> GetChannelFromHandleAsync(string handle)
     {
         // Simulate getting the channel ID from a handle
         _logger.LogInformation("Getting channel ID from handle at: {time}", DateTimeOffset.Now);
@@ -55,17 +79,32 @@ public class YouTubeAPIService : IYouTubeAPI
             if (channelsListResponse == null || channelsListResponse.Items == null || channelsListResponse.Items.Count == 0)
             {
                 _logger.LogWarning("No channel found for handle: {handle}", handle);
-                return "Error fetching channel ID";
+                return new Channel
+                {
+                    ChannelID = "No channel found for handle",
+                    Handle = "FAIL",
+                    Tags = string.Empty, // Placeholder for tags
+                };
             }
             var channel = channelsListResponse.Items.FirstOrDefault();
             if (channel != null)
             {
-                return channel.Id;
+                return new Channel
+                {
+                    ChannelID = channel.Id,
+                    Handle = handle,
+                    Tags = string.Empty, // Placeholder for tags
+                };
             }
             else
             {
                 _logger.LogWarning("No channel found for handle: {handle}", handle);
-                return "Error fetching channel ID";
+                return new Channel
+                {
+                    ChannelID = "Error fetching channel ID",
+                    Handle = "FAIL",
+                    Tags = string.Empty, // Placeholder for tags
+                };
             }
         }
         catch (GoogleApiException ex)
@@ -82,7 +121,7 @@ public class YouTubeAPIService : IYouTubeAPI
     }
 
 
-    public async Task<string> GetNewestVideoAsync(string channelID)
+    public async Task<YTvideo> GetNewestVideoAsync(string channelID)
     {
         // Simulate getting the newest video
         _logger.LogInformation("Getting newest video at: {time}", DateTimeOffset.Now);
@@ -116,15 +155,30 @@ public class YouTubeAPIService : IYouTubeAPI
 
         if (newestVideo != null)
         {
-            return newestVideo.ToString();
+
+            return new YTvideo
+            {
+                VideoID = newestVideo.ToString(),
+                ChannelID = channelID,
+                Title = "Sample Title", // Placeholder for title
+                Description = "Sample Description", // Placeholder for description
+                PublishedAt = DateTime.UtcNow // Placeholder for published date
+            };  
         }
         else
         {
             _logger.LogWarning("No videos found for channel ID: {channelID}", channelID);
-            return "Error fetching video";
+            return new YTvideo
+            {
+                VideoID = "No videos found for channel ID",
+                ChannelID = channelID,
+                Title = "FAIL",
+                Description = string.Empty,
+                PublishedAt = DateTime.UtcNow
+            };
         }
     }
-    public async Task<string> CreatePlaylistAsync(string title, string description)
+    public async Task<Playlist> CreatePlaylistAsync(string title, string description)
     {
         // Simulate creating a playlist
         _logger.LogInformation("Creating playlist at: {time}", DateTimeOffset.Now);
@@ -133,7 +187,13 @@ public class YouTubeAPIService : IYouTubeAPI
         throw new NotImplementedException("CreatePlaylistAsync method is not implemented yet.");
         //return Task.FromResult("Playlist ID");
 
-        return "Playlist ID";
+        return  new Playlist
+        {
+            PlaylistID = "SamplePlaylistID", // Placeholder for playlist ID
+            Name = title,
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
     }
 
 }
