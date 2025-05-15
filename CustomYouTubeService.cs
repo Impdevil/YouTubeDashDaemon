@@ -106,6 +106,11 @@ public class CustomYouTubeService
 
     }
 
+    public async Task<string> CreateUserPlaylist(string playlistName, string playlistTags)
+    {
+        
+    }
+
 
     public async Task<Channel> GetChannelFromHandle(string handle)
     {

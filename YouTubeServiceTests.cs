@@ -215,8 +215,48 @@ namespace YT_APP.Tests
             //never check dates that go to the millisecond
 
         }
+            [Fact]
+            [Trait ("Catagory", "independent" )]
+            public async Task Test_SetupUserPlayListAsync()
+            {
+                var _playlistName = "test Playlist"
+                var playListTags= "Scifi,Tech"
 
 
+                var APIplaylist = new Services.Playlist{
+                    playlistID = "12312313",
+                    playlistName = _playlistName,
+                    description = "A test description"
+                    CreatedAt = DateTime.UtcNow();
+                }
+                var dbPlaylist = new Database.Playlist{
+                    playlistID = "12312313",
+                    playlistName = _playlistName,
+                    created_at DateTime.UtcNow();
+                    Tags = playListTags
+                }
+
+
+
+                _youTubeAPIMock.Setup(x => x.CreatePlaylistAsync(playlistName).Returns(Task.FromResult(APIplaylist)));
+
+                var result = await youtubeService.CreateUserPlaylist(_playListName,PlayListTags);
+
+
+                
+                _youTubeAPIMock.Verify(x => x.CreatePlaylistAsync(playlistName), Times.Once);
+                Assert.Equal("SUCCESS", result);
+                Assert.Equal()
+            }
+
+            [Fact]
+            [Trait ("Catagory","independent")]
+            Public async Task Test_CreatePlaylistAndAddNewVideosToPlaylist() {
+                var playlistName = "AutoAddingPlaylist";
+                var playlist = New Services.Playlist{
+
+                }
+            }
 
 
         // [Fact]
