@@ -19,6 +19,7 @@ namespace YT_APP.Database
         public string Title { get; set; }
         public string Description { get; set; }
         public bool AddedToPlaylist { get; set; }
+        public string Duration { get; set; }
         public DateTime PublishedAt { get; set; }
     }
     public struct Playlist
@@ -80,17 +81,18 @@ namespace YT_APP.Database
                     );
                     CREATE TABLE IF NOT EXISTS videos (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        video_id TEXT NOT NULL,
+                        video_id TEXT NOT NULL UNIQUE,
                         channel_id TEXT NOT NULL,
                         title TEXT NOT NULL,
                         description TEXT NOT NULL,
+                        duration TEXT NOT NULL,
                         addedtoPlaylist int NOT NULL,
                         published_at TEXT NOT NULL,
                         FOREIGN KEY (channel_id) REFERENCES channels (channel_id)
                     );
                     CREATE TABLE IF NOT EXISTS playlists (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        playlist_id TEXT NOT NULL,
+                        playlist_id TEXT NOT NULL UNIQUE,
                         playList_tags TEXT,
                         name TEXT NOT NULL,
                         description TEXT,
@@ -131,21 +133,27 @@ namespace YT_APP.Database
                 command.ExecuteNonQuery();
             }
         }
-        public void InsertVideo(string videoId, string channelId, string title, string description)
+        
+        public void InsertChannel(Channel channel)
+        {
+            InsertChannel(channel.Handle, channel.ChannelID, channel.Tags);
+        }
+        public void InsertVideo(string videoId, string channelId, string title, string description, string duration)
         {
             using (var connection = GetConnection())
             {
                 var command = connection.CreateCommand();
                 command.CommandText =
                 @"
-                    INSERT INTO videos (video_id, channel_id, title, description, published_at, addedtoPlaylist)
-                    VALUES ($video_id, $channel_id, $title, $description, $published_at,0);
+                    INSERT INTO videos (video_id, channel_id, title, description, published_at, addedtoPlaylist,duration)
+                    VALUES ($video_id, $channel_id, $title, $description, $published_at, 0, $duration);
                 ";
                 command.Parameters.AddWithValue("$video_id", videoId);
                 command.Parameters.AddWithValue("$channel_id", channelId);
                 command.Parameters.AddWithValue("$title", title);
                 command.Parameters.AddWithValue("$description", description);
                 command.Parameters.AddWithValue("$published_at", DateTime.UtcNow.ToString("o"));
+                command.Parameters.AddWithValue("$duration", duration);
                 command.ExecuteNonQuery();
             }
         }
@@ -178,12 +186,11 @@ namespace YT_APP.Database
                 var command = connection.CreateCommand();
                 command.CommandText =
                 @"
-                    INSERT INTO playlist_videos (playlist_id, video_id, added_at)
-                    VALUES ($playlist_id, $video_id, $added_at);
+                    INSERT INTO playlist_videos (playlist_id, video_id)
+                    VALUES ($playlist_id, $video_id);
                 ";
                 command.Parameters.AddWithValue("$playlist_id", playlistId);
                 command.Parameters.AddWithValue("$video_id", videoId);
-                command.Parameters.AddWithValue("$added_at", DateTime.UtcNow.ToString("o"));
                 command.ExecuteNonQuery();
             }
         }
@@ -354,12 +361,16 @@ namespace YT_APP.Database
                 ";
                 command.Parameters.AddWithValue("$playlist_id", playlistID);
 
-                using (var reader = command.ExecuteReader()){
-                     playlist.PlaylistID = reader.GetString(0);
-                     playlist.Name = reader.GetString(1);
-                     playlist.Description = reader.GetString(2);
-                     playlist.Tags = reader.GetString(3);
-                     playlist.CreatedAt = DateTime.Parse(reader.GetString(4));
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        playlist.PlaylistID = reader.GetString(0);
+                        playlist.Name = reader.GetString(1);
+                        playlist.Description = reader.GetString(2);
+                        playlist.Tags = reader.GetString(3);
+                        playlist.CreatedAt = DateTime.Parse(reader.GetString(4));
+                    }
                 }
             }
             return playlist;

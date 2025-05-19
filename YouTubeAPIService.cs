@@ -2,6 +2,8 @@ using System.Threading.Channels;
 using Google;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
+using Google.Apis.YouTube.v3.Data;
+using YoutubeExplode;
 namespace YT_APP.Services;
 
 
@@ -31,9 +33,12 @@ public struct Playlist
 
 public interface IYouTubeAPI
 {
+
     Task<Channel> GetChannelFromHandleAsync(string handle);
+
     Task<YTvideo> GetNewestVideoAsync(string channelID);
-    Task<Playlist> CreatePlaylistAsync(string title, string description);
+
+
 }
 
 
@@ -53,146 +58,105 @@ public class YouTubeAPIService : IYouTubeAPI
         _apiKey = apiKey;
         _applicationName = applicationName;
         _clientId = clientId;
+
     }
 
 
+    /// <summary>
+    /// uses the YoutubeExplode library to get the channel ID from the handle of a channel the part after the @
+    /// </summary>
+    /// <param name="handle">the channel vanity url after the @</param>
+    /// <returns></returns>
     public async Task<Channel> GetChannelFromHandleAsync(string handle)
     {
-        // Simulate getting the channel ID from a handle
-        _logger.LogInformation("Getting channel ID from handle at: {time}", DateTimeOffset.Now);
-        _logger.LogInformation("Handle: {handle}", handle);
-        var youTubeService = new YouTubeService(new BaseClientService.Initializer()
-        {
-            ApiKey = _apiKey,
-            ApplicationName = _applicationName
-        });
-        var channelsListRequest = youTubeService.Channels.List("id");
-        channelsListRequest.ForHandle = handle;
+        _logger.LogInformation("Getting newest video at: {0}", DateTimeOffset.Now);
+        _logger.LogInformation("Channel url: {0}", handle);
+
+        var youtubeClient = new YoutubeClient();
+
         try
         {
-            var channelsListResponse = await channelsListRequest.ExecuteAsync();
 
-
-            _logger.LogInformation("API Response: {0}", channelsListResponse);
-            Console.WriteLine("API Response: {0}", channelsListResponse.ToString());
-
-            if (channelsListResponse == null || channelsListResponse.Items == null || channelsListResponse.Items.Count == 0)
+            var channel = await youtubeClient.Channels.GetByHandleAsync(handle);
+            _logger.LogInformation("fetching channel data from url: {0} , {1}", channel.Id, channel.Title);
+            return new Channel
             {
-                _logger.LogWarning("No channel found for handle: {handle}", handle);
-                return new Channel
-                {
-                    ChannelID = "No channel found for handle",
-                    Handle = "FAIL",
-                    Tags = string.Empty, // Placeholder for tags
-                };
-            }
-            var channel = channelsListResponse.Items.FirstOrDefault();
-            if (channel != null)
-            {
-                return new Channel
-                {
-                    ChannelID = channel.Id,
-                    Handle = handle,
-                    Tags = string.Empty, // Placeholder for tags
-                };
-            }
-            else
-            {
-                _logger.LogWarning("No channel found for handle: {handle}", handle);
-                return new Channel
-                {
-                    ChannelID = "Error fetching channel ID",
-                    Handle = "FAIL",
-                    Tags = string.Empty, // Placeholder for tags
-                };
-            }
-        }
-        catch (GoogleApiException ex)
-        {
-            _logger.LogError(ex, "Google API error fetching channel ID for handle: {handle}", handle);
-            throw;
+                ChannelID = channel.Id,
+                Handle = channel.Title,
+                Tags = string.Empty, // Placeholder for tags
+            };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching channel ID for handle: {handle}", handle);
-            throw;
-        }
-
-    }
-
-
-    public async Task<YTvideo> GetNewestVideoAsync(string channelID)
-    {
-        // Simulate getting the newest video
-        _logger.LogInformation("Getting newest video at: {time}", DateTimeOffset.Now);
-        _logger.LogInformation("Channel ID: {channelID}", channelID);
-        var youTubeService = new YouTubeService(new BaseClientService.Initializer()
-        {
-            ApiKey = _apiKey,
-            ApplicationName = _applicationName
-        });
-
-        var channelListRequest = youTubeService.Channels.List("contentDetails");
-        channelListRequest.Id = channelID;
-        channelListRequest.Mine = false;
-        channelListRequest.MaxResults = 1;
-
-        using (var stream = await channelListRequest.ExecuteAsStreamAsync())
-        using (var reader = new StreamReader(stream))
-        {
-            var rawJson = await reader.ReadToEndAsync();
-            _logger.LogInformation("Raw JSON Response: {0}", rawJson);
-            Console.WriteLine("Raw JSON Response: {0}", rawJson);
-        }
-        var channelListResponse = await channelListRequest.ExecuteAsync();
-
-
-        var newestVideo = channelListResponse.Items.Where(item => item.ContentDetails != null)
-            .Select(item => item.ContentDetails)
-            .Select(item => item.RelatedPlaylists)
-            .SelectMany(playlist => playlist.Uploads)
-            .FirstOrDefault();
-
-        if (newestVideo != null)
-        {
-
-            return new YTvideo
+            _logger.LogError(ex, "Error fetching channel ID for URL: {0}", handle);
+            return new Channel
             {
-                VideoID = newestVideo.ToString(),
-                ChannelID = channelID,
-                Title = "Sample Title", // Placeholder for title
-                Description = "Sample Description", // Placeholder for description
-                PublishedAt = DateTime.UtcNow // Placeholder for published date
-            };  
-        }
-        else
-        {
-            _logger.LogWarning("No videos found for channel ID: {channelID}", channelID);
-            return new YTvideo
-            {
-                VideoID = "No videos found for channel ID",
-                ChannelID = channelID,
-                Title = "FAIL",
-                Description = string.Empty,
-                PublishedAt = DateTime.UtcNow
+                ChannelID = "Error fetching channel ID" + ex.Message,
+                Handle = "FAIL",
+                Tags = string.Empty, // Placeholder for tags
             };
         }
     }
-    public async Task<Playlist> CreatePlaylistAsync(string title, string description)
+
+    public async Task<YTvideo> GetNewestVideoAsync(string channelId)
     {
-        // Simulate creating a playlist
-        _logger.LogInformation("Creating playlist at: {time}", DateTimeOffset.Now);
-
-
-
-
-        return  new Playlist
+        var youtubeClient = new YoutubeClient();
+        YTvideo latestSavedUploaded = new YTvideo();
+        try
         {
-            PlaylistID = "SamplePlaylistID", // Placeholder for playlist ID
-            Name = title,
-            Description = description,
-            CreatedAt = DateTime.UtcNow
-        };
+            var videos = youtubeClient.Channels.GetUploadsAsync(channelId);
+
+
+            await foreach (var latestVideo in videos)
+            {
+                _logger.LogInformation("Video ID: {0}", latestVideo.Id);
+                _logger.LogInformation("Video Title: {0}", latestVideo.Title);
+                latestSavedUploaded = new YTvideo
+                {
+                    VideoID = latestVideo.Id,
+                    Title = latestVideo.Title,
+                    ChannelID = channelId,
+                    Description = "Unknown",
+                    PublishedAt = DateTime.UtcNow
+                };
+                break;
+            }
+
+            try
+            {
+                var videoDetails = await youtubeClient.Videos.GetAsync(latestSavedUploaded.VideoID);
+
+                latestSavedUploaded.Description = videoDetails.Description;
+                latestSavedUploaded.PublishedAt = videoDetails.UploadDate.DateTime;
+                return latestSavedUploaded;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching video details for ID: {0}", latestSavedUploaded.VideoID);
+                return new YTvideo
+                {
+                    VideoID = "fetching video details failed" + ex.Message,
+                    Title = "FAIL",
+                    ChannelID = channelId,
+                    Description = "FAIL",
+                    PublishedAt = DateTime.MinValue
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching latest video for channel: {0}", channelId);
+            return new YTvideo
+            {
+                VideoID = "FAIL",
+                Title = "FAIL",
+                ChannelID = channelId,
+                Description = "FAIL",
+                PublishedAt = DateTime.MinValue
+            };
+        }
+
+
     }
 
 }

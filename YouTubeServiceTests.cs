@@ -139,229 +139,148 @@ namespace YT_APP.Tests
         }
 
 
+        /// <summary>
+        /// Test for GetChannelFromURL method
+        /// This test checks if the method correctly retrieves the channel ID from the URL.
+        /// </summary>
+        /// <returns></returns>
         [Fact]
-        [Trait("Category", "independent")]
-        public async Task test_AddNewChannelToCheckAsync()
+        [Trait("Catagory", "independent")]
+        public async Task test_GetChannelFromVanityURL_EXPLODER()
         {
             // Given
-            var handle = "ThePrimeagen";
-            Services.Channel channel = new Services.Channel
-            {
-                ChannelID = "1234567890",
-                Handle = handle,
-                Tags = "test, tags",
-            };
-            _youTubeAPIMock.Setup(x => x.GetChannelFromHandleAsync(handle)).Returns(Task.FromResult(channel));
+            var vanityURL = "ThePrimeTimeagen";
+            var channelID = "UCUyeluBRhGPCW4rPe_UvBZQ"; //  @ThePrimeTimeagen
+            var Logger = new Mock<ILogger<YouTubeAPIService>>();
+            var youtubeAPI = new YouTubeAPIService(Logger.Object, "apikey", "YT_APP", "YT_APP");
+            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
 
             // When
-            var result = await _youTubeService.AddNewChannelToCheck(handle, "tech,tags");
-
+            var result = await youtubeService.GetChannelFromHandle(vanityURL);
             // Then
-            Assert.Equal(channel.ChannelID, result.ToString());
-            _youTubeAPIMock.Verify(x => x.GetChannelFromHandleAsync(handle), Times.Once);
+            Assert.Equal(channelID, result.ChannelID);
+            Assert.Equal("ThePrimeTime", result.Handle);
+
+        }
+
+        [Fact]
+        [Trait("Catagory", "independent")]
+        public async Task test_GetLatestVideoFromVanityURL_EXPLODER()
+        {
+            // Given
+            var vanityURL = "ThePrimeTimeagen";
+            var channelID = "UCUyeluBRhGPCW4rPe_UvBZQ"; //  @ThePrimeTimeagen
+            var newestVideoTitle = "Peak Performance";
+
+            var Logger = new Mock<ILogger<YouTubeAPIService>>();
+            var youtubeAPI = new YouTubeAPIService(Logger.Object, "apikey", "YT_APP", "YT_APP");
+            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
+
+            // When
+            var resultHandle = await youtubeService.GetHandleLastestVideo(vanityURL);
+            // Then
+            Assert.Equal(channelID, resultHandle.ChannelID);
+
+
+            var resultVideo = await youtubeService.GetNewestVideoAsync(resultHandle.ChannelID);
+            Assert.Equal(newestVideoTitle, resultVideo.Title);
         }
 
 
+
+
+        #endregion
+        #region Database tests
         [Fact]
-        [Trait("Category", "independent")]
-        public async Task test_CheckLatestChannelsAsync()
+        [Trait("Category", "Database")]
+        public void test_DatabaseConnection()
         {
-
             // Given
-            var handle = "ThePrimeTimeagen";
-
-            var channel = new Services.Channel
-            {
-                ChannelID = "abcdefghijklmnop",
-                Handle = handle,
-                Tags = "test, tech, tags",
-            };
-            databaseHelper.InsertChannel(handle: channel.Handle, channelId: channel.ChannelID, tags: channel.Tags);            
-
-            var newestVideo = new Services.YTvideo
-            {
-                VideoID = "TDD: The Good, The Bad, and The Trash (The Standup)",
-                ChannelID = channel.ChannelID,
-                Title = "Test Video",
-                Description = "This is a test video",
-                PublishedAt = DateTime.Now
-            };
-            var newPlayList = new Services.Playlist
-            {
-                PlaylistID = "1234567890",
-                Name = "Test Playlist",
-                Description = "This is a test playlist",
-                CreatedAt = DateTime.Now
-            };
-
-            _youTubeAPIMock.Setup(x => x.GetNewestVideoAsync(channel.ChannelID)).Returns(Task.FromResult(newestVideo));
-            _youTubeAPIMock.Setup(x => x.CreatePlaylistAsync("Name","tag")).Returns(Task.FromResult(newPlayList));
-
-
+            var connectionString = "Data Source=YT_APP.db";
+            var dbHelper = new DatabaseHelper(connectionString, _DBlogger);
 
             // When
-            await _youTubeService.CheckAddedChannels();
-
+            dbHelper.CreateDatabase();
 
             // Then
-
-            _youTubeAPIMock.Verify(x => x.GetNewestVideoAsync(channel.ChannelID), Times.Once);
-
-            Database.Channel results = databaseHelper.GetChannelByID(channel.ChannelID);
-            Assert.Equal(channel.Handle, results.Handle);
-            Assert.Equal(channel.ChannelID, results.ChannelID);
-            Assert.Equal(channel.Tags, results.Tags);
-            //Assert.Equal(DateTime.UtcNow, results.LastChecked);
-            //never check dates that go to the millisecond
-
+            Assert.True(File.Exists(connectionString.Replace("Data Source=", "")));
         }
-            [Fact]
-            [Trait ("Catagory", "independent" )]
-            public async Task Test_SetupUserPlayListAsync()
-            {
-                var _playlistName = "test Playlist";
-                var playListTags= "Scifi,Tech";
-                var playlistDescription = "a test description";
+        [Fact]
+        [Trait("Category", "Database")]
+        public void test_DatabaseInsertChannel()
+        {
+            // Given
+            var connectionString = "Data Source=YT_APP.db";
+            var dbHelper = new DatabaseHelper(connectionString, _DBlogger);
+            dbHelper.CreateDatabase();
+
+            // When
+            dbHelper.InsertChannel("ThePrimeagen", "1234567890", "test, tags");
+
+            // Then
+            var channel = dbHelper.GetChannelByID("1234567890");
+            Assert.Equal("ThePrimeagen", channel.Handle);
+            Assert.Equal("1234567890", channel.ChannelID);
 
 
-                var APIplaylist = new Services.Playlist{
-                    PlaylistID = "12312313",
-                    Name = _playlistName,
-                    Description = "A test description",
-                    CreatedAt = DateTime.UtcNow
-                };
-                var dbPlaylist = new Database.Playlist{
-                    PlaylistID = "12312313",
-                    Name = _playlistName,
-                    CreatedAt = DateTime.UtcNow,
-                    Tags = playListTags
-                };
+            Test_CreatePlaylistAndAddNewVideosToPlaylist();
+        }
+
+        void Test_CreatePlaylistAndAddNewVideosToPlaylist()
+        {
+            // Given
+            var connectionString = "Data Source=YT_APP.db";
+            var dbHelper = new DatabaseHelper(connectionString, _DBlogger);
+            dbHelper.CreateDatabase();
+
+            // When
+            dbHelper.InsertVideo("1224567890", "1234567890", "This is a test video", "this is a test description","00:01:00");
+            dbHelper.InsertPlaylist("TP1234567890", "Test Playlist", "This is a test playlist", "test, tags");
+            dbHelper.InsertPlaylistVideo("TP1234567890", "1224567890");
+
+            // Then
+            var playlist = dbHelper.getPlaylistbyID("TP1234567890");
+            Assert.Equal("Test Playlist", playlist.Name);
+            Assert.Equal("This is a test playlist", playlist.Description);
+        }
 
 
 
-                _youTubeAPIMock.Setup(x => x.CreatePlaylistAsync(_playlistName,playlistDescription)).Returns(Task.FromResult(APIplaylist));
-
-                var result = await _youTubeService.CreateUserPlaylist(_playlistName,playListTags,APIplaylist.Description);
-
-
-                
-                _youTubeAPIMock.Verify(x => x.CreatePlaylistAsync(_playlistName,playlistDescription), Times.Once);
-                var dbResults = databaseHelper.getPlaylistbyName(_playlistName);
-                Assert.Equal("SUCCESS", result);
-                Assert.Equal(dbResults.Name,_playlistName);
-            }
-
-            // [Fact]
-            // [Trait ("Catagory","independent")]
-            // Public async Task Test_CreatePlaylistAndAddNewVideosToPlaylist() {
-            //     var playlistName = "AutoAddingPlaylist";
-            //     var playlist = New Services.Playlist{
-
-            //     }
-            // }
-
-
-        // [Fact]
-        // [Trait("Category", "independent")]
-        // public async Task CreatePlaylistAsync()
-        // {
-        //     Console.WriteLine("CreatePlaylistAsync:");
-        //     Console.WriteLine("_________________________________________________________________");
-        //     var title = "Test Playlist";
-        //     var description = "This is a test playlist";
-        //     var playlistID = "1234567890";
-
-        //     _youTubeAPIMock.Setup(x => x.CreatePlaylistAsync(title, description)).Returns(Task.FromResult(playlistID));
-        //     var result = await _youTubeService.CreatePlaylistAsync(title, description);
-
-        //     Assert.Equal(playlistID, result);
-
-        //     _youTubeAPIMock.Verify(x => x.CreatePlaylistAsync(title, description), Times.Once);
-        // }
 
         #endregion
 
+        #region exploder + db tests
+        [Fact]
+        [Trait("Category", "exploder+db")]
+        public async Task test_GetChannelIDFromHandleAndInsertIntoDB()
+        {
+            // Given
+            var handle = "TheVimeagen";
+            var channelID = "UCVk4b-svNJoeytrrlOixebQ";
+            var channel = new Services.Channel
+            {
+                ChannelID = channelID,
+                Handle = handle,
+                Tags = "test, tags"
+            };
+
+
+            var Logger = new Mock<ILogger<YouTubeAPIService>>();
+            var youtubeAPI = new YouTubeAPIService(Logger.Object, "apikey", "YT_APP", "YT_APP");
+            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
+            var result = await youtubeService.AddChannelToCheckList(handle, channel.Tags);
+
+            // When
+
+
+            // Then
+            var dbChannel = databaseHelper.GetChannelByID(channelID);
+            Assert.Equal(handle, dbChannel.Handle);
+            Assert.Equal("SUCCESS",result);
+        }
+        #endregion
+
         #region GoogleAPI tests
-
-        [Fact]
-        [Trait("Category", "GoogleAPI")]
-        public async Task test_GetChannelIDFromHandleAsync_GOOGLEAPI_My_Channel_ID()
-        {
-            var handle = "tartankavujr";
-            var channelID = "UC6-9JgSYZt7Q_tS2KIWMwFg"; //mine
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
-            var apikey = config.GetSection("Keys:TESTAPIKEY").Value;
-            Assert.NotNull(apikey);
-            Assert.NotEmpty(apikey);
-            var Logger = new Mock<ILogger<YouTubeAPIService>>();
-            var youtubeAPI = new YouTubeAPIService(Logger.Object, apikey, "YT_APP", "YT_APP");
-            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
-
-
-            // Act
-            var result = await youtubeService.GetChannelFromHandle(handle);
-
-            // Assert
-            Assert.Equal(channelID, result.ChannelID);
-        }
-
-        [Fact]
-        [Trait("Category", "GoogleAPI")]
-        public async Task test_GetChannelIDFromHandleAsync_GOOGLEAPI_2()
-        {
-            var handle = "@ThePrimeTimeagen";
-            var channelID = "UCUyeluBRhGPCW4rPe_UvBZQ"; //  @ThePrimeTimeagen
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
-            var apikey = config.GetSection("Keys:TESTAPIKEY").Value;
-            Assert.NotNull(apikey);
-            Assert.NotEmpty(apikey);
-            var Logger = new Mock<ILogger<YouTubeAPIService>>();
-            var youtubeAPI = new YouTubeAPIService(Logger.Object, apikey, "YT_APP", "YT_APP");
-            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
-
-            // Act
-            var result = await youtubeService.GetChannelFromHandle(handle);
-            // Assert
-            Assert.Equal(channelID, result.ChannelID);
-        }
-
-
-        [Fact]
-        [Trait("Category", "GoogleAPI")]
-        public async Task test_GetHandleLastestVideo_GOOGLEAPI_thePrime()
-        {
-            var handle = "@ThePrimeTimeagen";
-
-            var channelID = "UCUyeluBRhGPCW4rPe_UvBZQ"; //  @ThePrimeTimeagen
-            var newestVideoID = "TDD: The Good, The Bad, and The Trash (The Standup)";
-
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
-            var apikey = config.GetSection("Keys:TESTAPIKEY").Value;
-            Assert.NotNull(apikey);
-            Assert.NotEmpty(apikey);
-            var Logger = new Mock<ILogger<YouTubeAPIService>>();
-            var youtubeAPI = new YouTubeAPIService(Logger.Object, apikey, "YT_APP", "YT_APP");
-            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
-
-            // Act
-            var resultHandle = await youtubeService.GetChannelFromHandle(handle);
-            // Assert
-
-            var resultVideo = await _youTubeService.GetHandleLastestVideo(handle);
-
-            Console.WriteLine("newestVideoID: {0}", newestVideoID);
-            Console.WriteLine("Result: {0}", resultVideo);
-            Assert.Equal(channelID, resultHandle.ChannelID);
-            Assert.Equal(newestVideoID, resultVideo.VideoID);
-
-
-        }
 
 
         #endregion
