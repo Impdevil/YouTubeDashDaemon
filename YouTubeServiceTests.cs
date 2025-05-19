@@ -3,7 +3,7 @@ using Xunit;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using YT_APP.Services;
-using YT_APP.Database;
+using YT_APP.Database; 
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
@@ -219,44 +219,46 @@ namespace YT_APP.Tests
             [Trait ("Catagory", "independent" )]
             public async Task Test_SetupUserPlayListAsync()
             {
-                var _playlistName = "test Playlist"
-                var playListTags= "Scifi,Tech"
+                var _playlistName = "test Playlist";
+                var playListTags= "Scifi,Tech";
+                var playlistDescription = "a test description";
 
 
                 var APIplaylist = new Services.Playlist{
-                    playlistID = "12312313",
-                    playlistName = _playlistName,
-                    description = "A test description"
-                    CreatedAt = DateTime.UtcNow();
-                }
+                    PlaylistID = "12312313",
+                    Name = _playlistName,
+                    Description = "A test description",
+                    CreatedAt = DateTime.UtcNow
+                };
                 var dbPlaylist = new Database.Playlist{
-                    playlistID = "12312313",
-                    playlistName = _playlistName,
-                    created_at DateTime.UtcNow();
+                    PlaylistID = "12312313",
+                    Name = _playlistName,
+                    CreatedAt = DateTime.UtcNow,
                     Tags = playListTags
-                }
+                };
 
 
 
-                _youTubeAPIMock.Setup(x => x.CreatePlaylistAsync(playlistName).Returns(Task.FromResult(APIplaylist)));
+                _youTubeAPIMock.Setup(x => x.CreatePlaylistAsync(_playlistName,playlistDescription)).Returns(Task.FromResult(APIplaylist));
 
-                var result = await youtubeService.CreateUserPlaylist(_playListName,PlayListTags);
+                var result = await _youTubeService.CreateUserPlaylist(_playlistName,playListTags,APIplaylist.Description);
 
 
                 
-                _youTubeAPIMock.Verify(x => x.CreatePlaylistAsync(playlistName), Times.Once);
+                _youTubeAPIMock.Verify(x => x.CreatePlaylistAsync(_playlistName,playlistDescription), Times.Once);
+                var dbResults = databaseHelper.getPlaylistbyName(_playlistName);
                 Assert.Equal("SUCCESS", result);
-                Assert.Equal()
+                Assert.Equal(dbResults.Name,_playlistName);
             }
 
-            [Fact]
-            [Trait ("Catagory","independent")]
-            Public async Task Test_CreatePlaylistAndAddNewVideosToPlaylist() {
-                var playlistName = "AutoAddingPlaylist";
-                var playlist = New Services.Playlist{
+            // [Fact]
+            // [Trait ("Catagory","independent")]
+            // Public async Task Test_CreatePlaylistAndAddNewVideosToPlaylist() {
+            //     var playlistName = "AutoAddingPlaylist";
+            //     var playlist = New Services.Playlist{
 
-                }
-            }
+            //     }
+            // }
 
 
         // [Fact]

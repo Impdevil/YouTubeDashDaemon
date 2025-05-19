@@ -89,7 +89,7 @@ public class CustomYouTubeService
                 if (!isInPlaylist)
                 {
                     // Add the video to the playlist
-                    var playlistID = await  _youTubeAPI.CreatePlaylistAsync("Name", "tag");
+                    var playlistID = await  _youTubeAPI.CreatePlaylistAsync("Name", "Description");
                     if (playlistID.Name == "FAIL")
                     {
                         _logger.LogWarning("Error creating playlist for TV channel: {0}", playlistID.PlaylistID);
@@ -106,9 +106,27 @@ public class CustomYouTubeService
 
     }
 
-    public async Task<string> CreateUserPlaylist(string playlistName, string playlistTags)
+    public async Task<string> CreateUserPlaylist(string playlistName, string playlistTags,string description)
     {
+        _logger.LogInformation("Creating playlist for user @ {0} with the name: {1}" , DateTime.UtcNow, playlistName);
+
+        var results = await _youTubeAPI.CreatePlaylistAsync(playlistName,description);
+
+
+
+        if (results.Name == "FAIL"){
+            return "Playlist failed to be created API";
+        }
         
+
+        //create new db playlist
+        _databaseHelper.InsertPlaylist(results.PlaylistID,playlistName,description,playlistTags);
+
+        return "SUCCESS";
+        
+
+
+
     }
 
 

@@ -152,6 +152,7 @@ namespace YT_APP.Database
 
         public void InsertPlaylist(string playlistId, string name, string description, string tags)
         {
+            _logger.LogInformation("Creating DB Playlist");
             using (var connection = GetConnection())
             {
                 var command = connection.CreateCommand();
@@ -167,6 +168,7 @@ namespace YT_APP.Database
                 command.Parameters.AddWithValue("$created_at", DateTime.UtcNow.ToString("o"));
                 command.ExecuteNonQuery();
             }
+            _logger.LogInformation("DB created @ {0}", DateTime.UtcNow);
         }
 
         public void InsertPlaylistVideo(string playlistId, string videoId)
@@ -313,6 +315,58 @@ namespace YT_APP.Database
             }
         }
 
+        public Playlist getPlaylistbyName(string playlistName)
+        {
+            _logger.LogInformation("Getting Playlists by name @ {0}", DateTime.UtcNow);
+            var playlist = new Playlist();
+
+            using (var connection = GetConnection())
+            {
+                var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT playlist_id, name, description, playList_tags , created_at FROM playlists
+                    WHERE name = $playlistname
+                ";
+                command.Parameters.AddWithValue("$playlistname", playlistName);
+
+                using (var reader = command.ExecuteReader()){
+                     playlist.PlaylistID = reader.GetString(0);
+                     playlist.Name = reader.GetString(1);
+                     playlist.Description = reader.GetString(2);
+                     playlist.Tags = reader.GetString(3);
+                     playlist.CreatedAt = DateTime.Parse( reader.GetString(4));
+                }
+            }
+            return playlist;
+        }
+
+        public Playlist getPlaylistbyID(string playlistID)
+        {
+            _logger.LogInformation("Getting Playlists by name @ {0}", DateTime.UtcNow);
+            var playlist = new Playlist();
+
+            using (var connection = GetConnection())
+            {
+                var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT playlist_id, name, description, playList_tags , created_at FROM playlists
+                    WHERE playlist_id = $playlist_id
+                ";
+                command.Parameters.AddWithValue("$playlist_id", playlistID);
+
+                using (var reader = command.ExecuteReader()){
+                     playlist.PlaylistID = reader.GetString(0);
+                     playlist.Name = reader.GetString(1);
+                     playlist.Description = reader.GetString(2);
+                     playlist.Tags = reader.GetString(3);
+                     playlist.CreatedAt = DateTime.Parse(reader.GetString(4));
+                }
+            }
+            return playlist;
+        }
+
+
+
         public bool IsInVideosTable(string videoId)
         {
             using (var connection = GetConnection())
@@ -355,6 +409,7 @@ namespace YT_APP.Database
                 return Convert.ToInt32(command.ExecuteScalar()) > 0;
             }
         }
+
 
 
         #endregion

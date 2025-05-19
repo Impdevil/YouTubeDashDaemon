@@ -184,8 +184,7 @@ public class YouTubeAPIService : IYouTubeAPI
         _logger.LogInformation("Creating playlist at: {time}", DateTimeOffset.Now);
 
 
-        throw new NotImplementedException("CreatePlaylistAsync method is not implemented yet.");
-        //return Task.FromResult("Playlist ID");
+
 
         return  new Playlist
         {
