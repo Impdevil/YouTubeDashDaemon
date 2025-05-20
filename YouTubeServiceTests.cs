@@ -234,7 +234,7 @@ namespace YT_APP.Tests
             dbHelper.CreateDatabase();
 
             // When
-            dbHelper.InsertVideo("1224567890", "1234567890", "This is a test video", "this is a test description","00:01:00");
+            dbHelper.InsertVideo("1224567890", "1234567890", "This is a test video", "this is a test description", "00:01:00");
             dbHelper.InsertPlaylist("TP1234567890", "Test Playlist", "This is a test playlist", "test, tags");
             dbHelper.InsertPlaylistVideo("TP1234567890", "1224567890");
 
@@ -276,7 +276,23 @@ namespace YT_APP.Tests
             // Then
             var dbChannel = databaseHelper.GetChannelByID(channelID);
             Assert.Equal(handle, dbChannel.Handle);
-            Assert.Equal("SUCCESS",result);
+            Assert.Equal("SUCCESS", result);
+        }
+
+
+        [Fact]
+        [Trait("Category", "exploder+db")]
+        public async Task Test_RunThroughSavedChannelsAndAddNewVideosToDefinedPlaylist()
+        {
+            
+        }
+        
+
+        [Fact]
+        [Trait("Category", "exploder+db")]
+        public async Task Test_CreatePlaylistOfSetTagTypes()
+        {
+            
         }
         #endregion
 
