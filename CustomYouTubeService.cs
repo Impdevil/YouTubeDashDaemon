@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Threading.Channels;
 namespace YT_APP.Services;
+
 using YT_APP.Database;
+using YT_APP.ServiceStructs;
 
 
 /// <summary>
@@ -27,13 +29,13 @@ public class CustomYouTubeService
 
     }
 
-    public async Task<YTvideo> GetNewestVideoAsync(string channelID)
+    public async Task<ServiceStructs.Video> GetNewestVideoAsync(string channelID)
     {
         _logger.LogInformation("Getting newest video at: {0}", DateTime.UtcNow);
         return await _youTubeAPI.GetNewestVideoAsync(channelID);
     }
 
-    public async Task<YTvideo> GetHandleLastestVideo(string handle)
+    public async Task<ServiceStructs.Video> GetHandleLastestVideo(string handle)
     {
         var results = await GetChannelFromHandle(handle);
         var channelID = results.ChannelID;
@@ -47,7 +49,7 @@ public class CustomYouTubeService
         var results = await GetChannelFromHandle(handle);
         var channelID = results.ChannelID;
         _logger.LogInformation("Adding channel to check list: {0}", channelID);
-        Database.Channel channel = new Database.Channel
+        Channel channel = new Channel
         {
             ChannelID = results.ChannelID,
             Handle = results.Handle,

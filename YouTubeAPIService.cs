@@ -4,39 +4,18 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using YoutubeExplode;
+using YT_APP.ServiceStructs;
+using YT_APP.Database;
 namespace YT_APP.Services;
 
 
-public struct YTvideo
-{
-    public string VideoID { get; set; }
-    public string ChannelID { get; set; }
-    public string Title { get; set; }
-    public string Description { get; set; }
-    public DateTime PublishedAt { get; set; }
-
-}
-public struct Channel
-{
-    public string ChannelID { get; set; }
-    public string Handle { get; set; }
-    public string Tags { get; set; }
-}
-
-public struct Playlist
-{
-    public string PlaylistID { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
 
 public interface IYouTubeAPI
 {
 
-    Task<Channel> GetChannelFromHandleAsync(string handle);
+    Task<ServiceStructs.Channel> GetChannelFromHandleAsync(string handle);
 
-    Task<YTvideo> GetNewestVideoAsync(string channelID);
+    Task<ServiceStructs.Video> GetNewestVideoAsync(string channelID);
 
 
 }
@@ -67,7 +46,7 @@ public class YouTubeAPIService : IYouTubeAPI
     /// </summary>
     /// <param name="handle">the channel vanity url after the @</param>
     /// <returns></returns>
-    public async Task<Channel> GetChannelFromHandleAsync(string handle)
+    public async Task<ServiceStructs.Channel> GetChannelFromHandleAsync(string handle)
     {
         _logger.LogInformation("Getting newest video at: {0}", DateTimeOffset.Now);
         _logger.LogInformation("Channel url: {0}", handle);
@@ -79,7 +58,7 @@ public class YouTubeAPIService : IYouTubeAPI
 
             var channel = await youtubeClient.Channels.GetByHandleAsync(handle);
             _logger.LogInformation("fetching channel data from url: {0} , {1}", channel.Id, channel.Title);
-            return new Channel
+            return new ServiceStructs.Channel
             {
                 ChannelID = channel.Id,
                 Handle = channel.Title,
@@ -89,7 +68,7 @@ public class YouTubeAPIService : IYouTubeAPI
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching channel ID for URL: {0}", handle);
-            return new Channel
+            return new ServiceStructs.Channel
             {
                 ChannelID = "Error fetching channel ID" + ex.Message,
                 Handle = "FAIL",
@@ -98,10 +77,10 @@ public class YouTubeAPIService : IYouTubeAPI
         }
     }
 
-    public async Task<YTvideo> GetNewestVideoAsync(string channelId)
+    public async Task<ServiceStructs.Video> GetNewestVideoAsync(string channelId)
     {
         var youtubeClient = new YoutubeClient();
-        YTvideo latestSavedUploaded = new YTvideo();
+        ServiceStructs.Video latestSavedUploaded = new ServiceStructs.Video();
         try
         {
             var videos = youtubeClient.Channels.GetUploadsAsync(channelId);
@@ -111,7 +90,7 @@ public class YouTubeAPIService : IYouTubeAPI
             {
                 _logger.LogInformation("Video ID: {0}", latestVideo.Id);
                 _logger.LogInformation("Video Title: {0}", latestVideo.Title);
-                latestSavedUploaded = new YTvideo
+                latestSavedUploaded = new ServiceStructs.Video
                 {
                     VideoID = latestVideo.Id,
                     Title = latestVideo.Title,
@@ -133,9 +112,9 @@ public class YouTubeAPIService : IYouTubeAPI
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching video details for ID: {0}", latestSavedUploaded.VideoID);
-                return new YTvideo
+                return new ServiceStructs.Video
                 {
-                    VideoID = "fetching video details failed" + ex.Message,
+                    VideoID = "fetching video details failed." + ex.Message,
                     Title = "FAIL",
                     ChannelID = channelId,
                     Description = "FAIL",
@@ -146,7 +125,7 @@ public class YouTubeAPIService : IYouTubeAPI
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching latest video for channel: {0}", channelId);
-            return new YTvideo
+            return new ServiceStructs.Video
             {
                 VideoID = "FAIL",
                 Title = "FAIL",

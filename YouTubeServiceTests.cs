@@ -6,6 +6,7 @@ using YT_APP.Services;
 using YT_APP.Database; 
 using System.Threading.Tasks;
 using Xunit.Abstractions;
+using YT_APP.ServiceStructs;
 
 namespace YT_APP.Tests
 {
@@ -63,7 +64,7 @@ namespace YT_APP.Tests
         {
 
             var channelID = "1234567890";
-            var newestVideo = new YTvideo
+            var newestVideo = new ServiceStructs.Video
             {
                 VideoID = "1234567890",
                 ChannelID = channelID,
@@ -91,7 +92,7 @@ namespace YT_APP.Tests
         public async Task test_GetChannelIDFromHandleAsync()
         {
             var handle = "ThePrimeagen";
-            var channel = new Services.Channel
+            var channel = new ServiceStructs.Channel
             {
                 ChannelID = "1234567890",
                 Handle = handle,
@@ -112,13 +113,13 @@ namespace YT_APP.Tests
         public async Task test_GetHandleLastestVideo()
         {
             var handle = "ThePrimeagen";
-            var channel = new Services.Channel
+            var channel = new ServiceStructs.Channel
             {
                 ChannelID = "1234567890",
                 Handle = handle,
                 Tags = "test, tags"
             };
-            var newestVideo = new Services.YTvideo
+            var newestVideo = new ServiceStructs.Video
             {
                 VideoID = "TDD: The Good, The Bad, and The Trash (The Standup)",
                 ChannelID = channel.ChannelID,
@@ -170,7 +171,7 @@ namespace YT_APP.Tests
             // Given
             var vanityURL = "ThePrimeTimeagen";
             var channelID = "UCUyeluBRhGPCW4rPe_UvBZQ"; //  @ThePrimeTimeagen
-            var newestVideoTitle = "Peak Performance";
+            var newestVideoTitle = "Experts Have It Easy...";
 
             var Logger = new Mock<ILogger<YouTubeAPIService>>();
             var youtubeAPI = new YouTubeAPIService(Logger.Object, "apikey", "YT_APP", "YT_APP");
@@ -257,7 +258,7 @@ namespace YT_APP.Tests
             // Given
             var handle = "TheVimeagen";
             var channelID = "UCVk4b-svNJoeytrrlOixebQ";
-            var channel = new Services.Channel
+            var channel = new ServiceStructs.Channel
             {
                 ChannelID = channelID,
                 Handle = handle,
