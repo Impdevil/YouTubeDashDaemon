@@ -1,3 +1,5 @@
+using System.Dynamic;
+
 namespace YT_APP.ServiceStructs;
 
 public struct Video
@@ -16,6 +18,7 @@ public struct Channel
     public string Handle { get; set; }
     public string Tags { get; set; }
     public DateTime LastChecked { get; set; }
+    public int UploadRate { get; set; } // Number of uploads in the last 30 days
 }
 
 public struct Playlist
@@ -31,4 +34,14 @@ public struct PlaylistVideo
     public string PlaylistID { get; set; }
     public string VideoID { get; set; }
     public DateTime AddedAt { get; set; }
+}
+
+
+public struct Result<T>
+{
+    public string Message { get; set; }
+    public bool Success { get; set; }
+    public T resultData {  get; set; }
+    public string ErrorCode { get; set; }
+    public string ErrorMessage { get; set; }
 }

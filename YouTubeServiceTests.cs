@@ -285,7 +285,32 @@ namespace YT_APP.Tests
         [Trait("Category", "exploder+db")]
         public async Task Test_RunThroughSavedChannelsAndAddNewVideosToDefinedPlaylist()
         {
-            
+            Playlist playlist = new Playlist
+            {
+                PlaylistID = "TP1234567890",
+                Name = "Test Playlist",
+                Description = "This is a test playlist",
+                Tags = "test, tags",
+                CreatedAt = DateTime.UtcNow
+            };
+            Channel channel = new Channel
+            {
+                ChannelID = "UCVk4b-svNJoeytrrlOixebQ",
+                Handle = "TheVimeagen",
+                Tags = "test, tags",
+                LastChecked = DateTime.UtcNow.AddDays(-1)
+            };
+
+            databaseHelper.InsertPlaylist(playlist.PlaylistID, playlist.Name, playlist.Description, playlist.Tags);
+            databaseHelper.InsertChannel(channel.Handle, channel.ChannelID, channel.Tags);
+
+            var Logger = new Mock<ILogger<YouTubeAPIService>>();
+            var youtubeAPI = new YouTubeAPIService(Logger.Object, "apikey", "YT_APP", "YT_APP");
+            var youtubeService = new CustomYouTubeService(_youTubeServiceLogger, youtubeAPI, databaseHelper);
+
+            _youTubeServiceLogger.LogInformation("Running through saved channels and adding new videos to defined playlist");
+            var result = await youtubeService.AddCheckedChannelLatestVideos(1);
+
         }
         
 

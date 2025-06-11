@@ -71,4 +71,63 @@ public class CustomYouTubeService
         return "SUCCESS";
     }
 
+    public async Task<string> AddCheckedChannelLatestVideos(int checkrate = 10)
+    {
+        int checkedChannels = 0;
+        _logger.LogInformation("Adding checked channel latest videos at: {0}", DateTime.UtcNow);
+        var channels = _databaseHelper.GetDayOldCheckedChannels();
+
+        if (channels.Count == 0)
+        {
+            _logger.LogInformation("No channels to check");
+            return "No channels to check";
+        }
+        foreach (var channel in channels)
+        {
+            _databaseHelper.UpdateChannelLastChecked(channel);
+
+            try
+            {
+
+                var latestVideo = await _youTubeAPI.GetNewestListVideosAsync(channel.ChannelID, channel.UploadRate);
+                if (latestVideo == null || !(latestVideo.Count > 0))
+                {
+                    _logger.LogInformation("No latest video found for channel: {0}", channel.ChannelID);
+                    continue;
+                }
+                foreach (var video in latestVideo)
+                {
+                    _logger.LogInformation("Latest video found: {0} for channel: {1}", video.VideoID, channel.Handle);
+                    if (video.VideoID != null && !string.IsNullOrEmpty(video.VideoID))
+                    {
+                        // Check if the video already exists in the database
+                        if (!_databaseHelper.IsInVideosTable(video.VideoID))
+                        {
+                            // Add the video to the database
+                            _databaseHelper.InsertVideo(video);
+                            _logger.LogInformation("Added video: {0} to channel: {1}", video.VideoID, channel.ChannelID);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Video: {0} already exists in the database for channel: {1}", video.VideoID, channel.ChannelID);
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding latest video for channel: {0}", channel.ChannelID);
+            }
+            if (checkedChannels >= checkrate)
+            {
+                _logger.LogInformation("Reached check rate limit of {0} channels", checkrate);
+                break;
+            }
+            checkedChannels++;
+        }
+
+        return "SUCCESS";
+    }
+
 }

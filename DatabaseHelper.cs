@@ -46,6 +46,7 @@ namespace YT_APP.Database
                         handle TEXT NOT NULL,
                         tags TEXT NOT NULL,
                         lastChecked TEXT NOT NULL,
+                        UploadRate int NOT NULL DEFAULT 1,
                         created_at TEXT NOT NULL
                     );
                     CREATE TABLE IF NOT EXISTS videos (
@@ -83,7 +84,7 @@ namespace YT_APP.Database
 
 
         #region Insert Methods
-        public void InsertChannel(string handle,string channelId, string tags)
+        public void InsertChannel(string handle,string channelId, string tags,int uploadRate = 1)
         {
             using (var connection = GetConnection())
             {
@@ -91,13 +92,14 @@ namespace YT_APP.Database
                 _logger.LogInformation("Inserting channel: {0} {1} {2} {3} {4}", handle, channelId, tags, DateTime.UtcNow.ToString("o"), DateTime.UtcNow.AddDays(-1).ToString("o"));
                 command.CommandText =
                 @"
-                    INSERT INTO channels (channel_id, handle, tags, created_at, lastChecked)
-                    VALUES ($channel_id, $handle, $tags, $created_at,$lastChecked);
+                    INSERT INTO channels (channel_id, handle, tags, created_at, lastChecked, UploadRate)
+                    VALUES ($channel_id, $handle, $tags, $created_at,$lastChecked,$UploadRate);
                 ";
                 command.Parameters.AddWithValue("$channel_id", channelId);
                 command.Parameters.AddWithValue("$handle", handle);
                 command.Parameters.AddWithValue("$tags", tags);
                 command.Parameters.AddWithValue("$created_at", DateTime.UtcNow.ToString("o"));
+                command.Parameters.AddWithValue("$UploadRate", uploadRate);
                 command.Parameters.AddWithValue("$lastChecked", DateTime.UtcNow.AddDays(-2).ToString("o"));
                 command.ExecuteNonQuery();
             }
@@ -111,6 +113,7 @@ namespace YT_APP.Database
         {
             using (var connection = GetConnection())
             {
+                _logger.LogInformation("-----Inserting video: {0} ??? {1} ??? {2} ??? {3} ??? {4}???----", videoId, channelId, title, description, duration);
                 var command = connection.CreateCommand();
                 command.CommandText =
                 @"
@@ -125,6 +128,10 @@ namespace YT_APP.Database
                 command.Parameters.AddWithValue("$duration", duration);
                 command.ExecuteNonQuery();
             }
+        }
+        public void InsertVideo(Video video)
+        {
+            InsertVideo(video.VideoID, video.ChannelID, video.Title, video.Description, video.Duration);
         }
 
         public void InsertPlaylist(string playlistId, string name, string description, string tags)
@@ -173,7 +180,7 @@ namespace YT_APP.Database
                 var command = connection.CreateCommand();
                 command.CommandText =
                 @"
-                    SELECT channel_id, handle, tag FROM channels;
+                    SELECT channel_id, handle, tags,UploadRate FROM channels;
                 ";
 
                 using (var reader = command.ExecuteReader())
@@ -186,6 +193,7 @@ namespace YT_APP.Database
                             ChannelID = reader.GetString(0),
                             Handle = reader.GetString(1),
                             Tags = reader.GetString(2),
+                            UploadRate = reader.GetInt32(3),
                             LastChecked = DateTime.UtcNow
                         };
                         channels.Add(channel);
@@ -202,7 +210,7 @@ namespace YT_APP.Database
                 var command = connection.CreateCommand();
                 command.CommandText =
                 @"
-                    SELECT channel_id, handle, tags FROM channels WHERE lastChecked < datetime('now', '-1 day');
+                    SELECT channel_id, handle, tags, uploadRate FROM channels WHERE lastChecked < datetime('now', '-1 day');
                 ";
 
                 using (var reader = command.ExecuteReader())
@@ -219,6 +227,7 @@ namespace YT_APP.Database
                             ChannelID = reader.GetString(0),
                             Handle = reader.GetString(1),
                             Tags = reader.GetString(2),
+                            UploadRate = reader.GetInt32(3),
                             LastChecked = DateTime.UtcNow
                         };
                         channels.Add(channel);
@@ -249,6 +258,7 @@ namespace YT_APP.Database
                             ChannelID = reader.GetString(0),
                             Handle = reader.GetString(1),
                             Tags = reader.GetString(2),
+                            UploadRate = reader.GetInt32(3),
                             LastChecked = reader.GetDateTime(3)
                         };
                     }
@@ -397,20 +407,26 @@ namespace YT_APP.Database
 
 
         #region Update Methods
-        public void UpdateChannel(string channelId, string handle, string tags)
+        public void UpdateChannel(string channelId, string handle, string tags, DateTime lastChecked)
         {
             using (var connection = GetConnection())
             {
+                _logger.LogInformation("Updating channel: {0} {1}", channelId, lastChecked);
                 var command = connection.CreateCommand();
                 command.CommandText =
                 @"
-                    UPDATE channels SET handle = $handle, tag = $tag WHERE channel_id = $channel_id;
+                    UPDATE channels SET handle = $handle, tags = $tag, lastChecked = $lastChecked WHERE channel_id = $channel_id;
                 ";
                 command.Parameters.AddWithValue("$channel_id", channelId);
                 command.Parameters.AddWithValue("$handle", handle);
                 command.Parameters.AddWithValue("$tag", tags);
+                command.Parameters.AddWithValue("$lastChecked", lastChecked);
                 command.ExecuteNonQuery();
             }
+        }
+        public void UpdateChannelLastChecked(ServiceStructs.Channel channel)
+        {
+            UpdateChannel(channel.ChannelID, channel.Handle, channel.Tags,DateTime.UtcNow);
         }
         public void UpdateVideo(string videoId, string channelId, string title, string description)
         {
